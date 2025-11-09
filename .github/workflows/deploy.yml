@@ -56,6 +56,7 @@ jobs:
         run: gcloud auth configure-docker $REGION-docker.pkg.dev --quiet
 
       - name: Build and push image
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .

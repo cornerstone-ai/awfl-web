@@ -62,15 +62,16 @@ locals {
 resource "local_file" "actions_variables" {
   filename = "${path.module}/../.github/actions-variables.json"
   content  = jsonencode({
-    GCP_WIF_PROVIDER = google_iam_workload_identity_pool_provider.github_web.name
-    GCP_DEPLOY_SA    = var.create_deploy_sa ? google_service_account.deploy[0].email : (var.deploy_sa_email != "" ? var.deploy_sa_email : null)
-    GCP_PROJECT_ID   = var.project_id
-    GCP_REGION       = var.region
-    ARTIFACT_REPO    = var.artifact_repo_id
-    IMAGE_NAME       = var.service_name
-    TF_BUCKET        = var.tfstate_bucket_name
-    TF_PREFIX        = var.tfstate_prefix
-    CLOUD_RUN_RUNTIME_SA = local.default_compute_sa
+    GCP_WIF_PROVIDER      = google_iam_workload_identity_pool_provider.github_web.name
+    GCP_DEPLOY_SA         = var.create_deploy_sa ? google_service_account.deploy[0].email : (var.deploy_sa_email != "" ? var.deploy_sa_email : null)
+    GCP_PROJECT_ID        = var.project_id
+    GCP_REGION            = var.region
+    ARTIFACT_REPO         = var.artifact_repo_id
+    IMAGE_NAME            = var.service_name
+    SERVICE               = var.service_name
+    TF_BUCKET             = var.tfstate_bucket_name
+    TF_PREFIX             = var.tfstate_prefix
+    CLOUD_RUN_RUNTIME_SA  = local.default_compute_sa
   })
   depends_on = [
     google_iam_workload_identity_pool_provider.github_web,
