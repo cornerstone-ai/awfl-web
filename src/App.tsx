@@ -8,6 +8,7 @@ import { getCookie, setCookie } from './utils/cookies'
 import { useProjectsList } from './features/projects/public'
 import { SettingsPage, useCredsApi } from './features/settings/public'
 import { InstructionsOverview } from './features/instructions/public'
+import { ConsumerStatusPill } from './features/consumers/public'
 
 type Route = 'home' | 'sessions' | 'tasks' | 'integrations-github' | 'settings'
 
@@ -170,6 +171,11 @@ function App() {
             ))}
             <option value="__manage__">Manage…</option>
           </select>
+
+          {/* Consumer status pill (only when authed and a project is selected) */}
+          {user && projectId ? (
+            <ConsumerStatusPill idToken={idToken} projectId={projectId} enabled={true} />
+          ) : null}
         </nav>
         <AuthControls />
       </header>

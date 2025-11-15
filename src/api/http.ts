@@ -10,6 +10,8 @@ export type RequestOptions = {
   signal?: AbortSignal
   // When true, omit x-project-id header for user-scoped operations (e.g., user credentials)
   noProjectHeader?: boolean
+  // Optional per-request extra headers (e.g., x-consumer-id)
+  extraHeaders?: Record<string, string>
 }
 
 // Determine default API base from environment. In dev, leave empty to use Vite proxy (/api).
@@ -23,6 +25,12 @@ export function buildHeaders(opts: ApiClientOptions, ropts?: RequestOptions) {
   if (opts.skipAuth) headers['X-Skip-Auth'] = '1'
   if (!ropts?.noProjectHeader) {
     headers['x-project-id'] = getCookie('awfl.projectId') || ''
+  }
+  // Merge extra per-request headers last to allow overrides
+  if (ropts?.extraHeaders) {
+    for (const [k, v] of Object.entries(ropts.extraHeaders)) {
+      if (v != null) headers[k] = String(v)
+    }
   }
   return headers
 }

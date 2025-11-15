@@ -47,6 +47,13 @@ export function makeApiClient(opts: ApiClientOptions) {
       return await getJson(`/workflows/projects${qs}`, opts, ropts)
     },
 
+    // Consumer lock status under /workflows/projects/:projectId/consumer-lock/status
+    async consumerLockStatus(projectId: string, ropts?: RequestOptions) {
+      if (!projectId) throw new Error('consumerLockStatus: projectId is required')
+      const path = `/workflows/projects/${encodeURIComponent(projectId)}/consumer-lock/status`
+      return await getJson(path, opts, ropts)
+    },
+
     // Tasks service under /workflows/tasks
     async tasksList(
       params: { sessionId?: string; status?: string; limit?: number; order?: 'asc' | 'desc' },
