@@ -20,6 +20,7 @@ interface SessionItemsViewProps {
   // Refs for scroll/anchor management
   containerRef: Ref<HTMLDivElement | null>
   bottomRef?: Ref<HTMLDivElement | null>
+  topRef?: Ref<HTMLDivElement | null>
   // Identity for collapse state persistence
   sessionId?: string | null
   idToken?: string | null
@@ -37,6 +38,7 @@ export function SessionItemsView({
   execError,
   containerRef,
   bottomRef,
+  topRef,
   sessionId,
   idToken,
 }: SessionItemsViewProps) {
@@ -80,6 +82,9 @@ export function SessionItemsView({
           alignSelf: 'stretch',
         }}
       >
+        {/* Top sentinel for IO-less top stick detection */}
+        <div ref={topRef as any} style={{ height: 1 }} />
+
         {activeTaskStatus ? (
           <div>
             {tasksError ? (
@@ -100,7 +105,8 @@ export function SessionItemsView({
         ) : (
           <YojMessageList messages={messages as any} sessionId={sessionId || undefined} idToken={idToken || undefined} />
         )}
-        <div ref={bottomRef} />
+        {/* Bottom sentinel for IO-driven near-bottom detection; disable overflow anchoring here */}
+        <div ref={bottomRef as any} style={{ height: 1, overflowAnchor: 'none' as any }} />
       </div>
     </div>
   )

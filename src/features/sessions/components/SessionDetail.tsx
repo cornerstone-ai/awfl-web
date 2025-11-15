@@ -30,6 +30,7 @@ export interface SessionDetailProps {
   // Scrolling
   containerRef: Ref<HTMLDivElement | null>
   bottomRef?: Ref<HTMLDivElement | null>
+  topRef?: Ref<HTMLDivElement | null>
 
   // Identity for collapse state persistence
   sessionId?: string | null
@@ -66,6 +67,7 @@ export function SessionDetail(props: SessionDetailProps) {
     onDeleteTask,
     containerRef,
     bottomRef,
+    topRef,
     sessionId,
     idToken,
     promptPlaceholder,
@@ -187,6 +189,7 @@ export function SessionDetail(props: SessionDetailProps) {
         execError={execError}
         containerRef={containerRef}
         bottomRef={bottomRef}
+        topRef={topRef}
         sessionId={sessionId || undefined}
         idToken={idToken || undefined}
       />
