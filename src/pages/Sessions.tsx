@@ -1,16 +1,12 @@
-import { useMemo, useState, useRef } from 'react'
-import { useMemo, useState, useRef } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 
 // Components
 import { SessionSidebar, SessionDetail, useSessionSelection, filterSessionsByQuery, mapTopicInfoToSession, getWorkflowName } from '../features/sessions/public'
-import { SessionSidebar, SessionDetail, useSessionSelection, filterSessionsByQuery, mapTopicInfoToSession, getWorkflowName } from '../features/sessions/public'
 import { TaskModal } from '../features/tasks/public'
-import { AgentModal, useAgentModalController } from '../features/agents/public'
 import { AgentModal, useAgentModalController } from '../features/agents/public'
 import { SidebarNav } from '../features/sidebar/public'
 import { FileSystemSidebar } from '../features/filesystem/public'
-import { FileEditorModal, useFileEditorController } from '../features/fileviewer/public'
 import { FileEditorModal, useFileEditorController } from '../features/fileviewer/public'
 
 // Types
@@ -22,7 +18,7 @@ import { useTopicContextYoj } from '../features/yoj/public'
 import { useWorkflowExec, useDebouncedValue, useSessionPolling } from '../core/public'
 import { useTasksCounts, useSessionTasks } from '../features/tasks/public'
 import { usePlainify } from '../features/plain/public'
-import { useStickyScroll } from '../features/sessions/public'
+import { useScrollHome} from '../features/sessions/public'
 
 const mockSessions: Session[] = []
 
@@ -42,27 +38,10 @@ export default function Sessions() {
     mapDocToSession: mapTopicInfoToSession,
   })
 
-  // If auth is missing, clear selection
-  useEffect(() => {
-    if (!idToken || !user?.uid) {
-      setSelectedId(null)
-    }
-  }, [idToken, user?.uid])
-
-  // Initialize/reset selection when sessions change
-  useEffect(() => {
-    if (!selectedId && sessions.length) {
-      setSelectedId(sessions[0].id)
-    } else if (selectedId && sessions.length && !sessions.find(s => s.id === selectedId)) {
-      // Previously selected session is no longer present; select first
-      setSelectedId(sessions[0].id)
-    }
-  }, [sessions, selectedId])
-
-  const sourceSessions = sessions.length ? sessions : mockSessions
-
   // Debounce query to reduce recomputation during fast typing
   const debouncedQuery = useDebouncedValue(query, 200)
+
+  const sourceSessions = sessions.length ? sessions : mockSessions
 
   // Filter sessions using shared helper
   const filtered = useMemo(() => filterSessionsByQuery(sourceSessions, debouncedQuery), [sourceSessions, debouncedQuery])
@@ -74,43 +53,16 @@ export default function Sessions() {
     userId: user?.uid,
     idToken,
   })
-  // Selection lifecycle encapsulated in feature hook
-  const { selectedId, setSelectedId, selected } = useSessionSelection({
-    sessions,
-    filtered,
-    userId: user?.uid,
-    idToken,
-  })
+
+  // If auth is missing, clear selection
+  useEffect(() => {
+    if (!idToken || !user?.uid) {
+      setSelectedId(null)
+    }
+  }, [idToken, user?.uid, setSelectedId])
 
   // Compute workflow name based on session and env
   const workflowName = getWorkflowName(selected?.id)
-
-  // Resolve workspace (project/session scoped)
-  const projectId = useProjectId()
-  const { data: workspaceId } = useWorkspaceId({
-    projectId,
-    sessionId: selected?.id,
-    idToken,
-    enabled: !!selected?.id && !!projectId,
-  })
-
-  // Single shared workflow exec hook for this page
-  const { status: wfStatus, running: wfRunning, error: wfError, start: startWf, stop: stopWf } = useWorkflowExec({
-    sessionId: selected?.id,
-    idToken,
-    enabled: !!selected,
-  })
-  // Compute workflow name based on session and env
-  const workflowName = getWorkflowName(selected?.id)
-
-  // Resolve workspace (project/session scoped)
-  const projectId = useProjectId()
-  const { data: workspaceId } = useWorkspaceId({
-    projectId,
-    sessionId: selected?.id,
-    idToken,
-    enabled: !!selected?.id && !!projectId,
-  })
 
   // Single shared workflow exec hook for this page
   const { status: wfStatus, running: wfRunning, error: wfError, start: startWf, stop: stopWf } = useWorkflowExec({
@@ -159,64 +111,25 @@ export default function Sessions() {
     enabled: !!selected && !activeTaskStatus,
   })
 
-  // Wire event-driven refresh: on each event, refresh context and tasks
-  useEventsConsumer({
-    workspaceId: workspaceId || null,
-    projectId,
-    sessionId: selected?.id,
-    idToken,
-    scope: 'session',
-    enabled: !!workspaceId && !!selected?.id,
-    onEvent: () => {
-      if ((import.meta as any)?.env?.DEV) {
-        // eslint-disable-next-line no-console
-        console.debug('[Sessions] event → reload()', { sessionId: selected?.id, activeTaskStatus })
-      }
-      // Always refresh both context and tasks; hooks will ignore if disabled
-      reload()
-      reloadTasks()
-      reloadTaskCounts()
-    },
-    onError: (msg) => {
-      if ((import.meta as any)?.env?.DEV) {
-        // eslint-disable-next-line no-console
-        console.debug('[Sessions] SSE error', msg)
-      }
-    },
-  })
-
   // Scroll container/anchor refs
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const topRef = useRef<HTMLDivElement | null>(null)
 
-  // Sticky scroll: bottom for messages, top for tasks
-  const stickTo: 'top' | 'bottom' = activeTaskStatus ? 'top' : 'bottom'
 
-  // Identify the tail for autoscroll triggers
+  // Reusable auto-scroll behavior with "home" detection:
+  const home: 'top' | 'bottom' = activeTaskStatus ? 'top' : 'bottom'
+  const itemCount = activeTaskStatus ? (sessionTasks?.length || 0) : (messages?.length || 0)
+
   const viewKey = `${selected?.id || 'none'}:${activeTaskStatus ? `tasks:${activeTaskStatus}` : 'messages'}`
-  const tailKey = useMemo(() => {
-    if (activeTaskStatus) {
-      const first = sessionTasks && sessionTasks.length > 0 ? sessionTasks[0] : null
-      const k = first?.id || (first?.updatedAt as any) || (first?.createdAt as any)
-      return `${viewKey}:top:${k ?? 'none'}:${sessionTasks?.length || 0}`
-    } else {
-      const last = Array.isArray(messages) && messages.length > 0 ? messages[messages.length - 1] : null
-      const id = (last as any)?.id || (last as any)?.name || (last as any)?.uid
-      const ts = (last as any)?.create_time || (last as any)?.timestamp || (last as any)?.time
-      return `${viewKey}:bottom:${id ?? ts ?? 'none'}:${messages?.length || 0}`
-    }
-  }, [activeTaskStatus, sessionTasks, messages, viewKey])
 
-  useStickyScroll({
+  useScrollHome({
     containerRef: scrollRef,
-    bottomRef: bottomRef,
-    topRef: topRef,
-    tailKey,
-    stickTo,
+    anchorRef: home === 'bottom' ? bottomRef : undefined,
+    itemCount,
+    home,
     enabled: !!selected,
     key: viewKey,
-    threshold: 8,
   })
 
   // Plainify: encapsulated hook
@@ -251,7 +164,7 @@ export default function Sessions() {
 
   // Disable timed polling; rely solely on event-driven refresh
   useSessionPolling({
-    enabled: false,
+    enabled: !!selected?.id,
     sessionId: selected?.id,
     activeTaskStatus,
     running: !!running,
@@ -261,16 +174,6 @@ export default function Sessions() {
     intervalMs: 1500,
   })
 
-  // Agent modal controller (encapsulated in features/agents)
-  const agent = useAgentModalController({
-    idToken,
-    sessionId: selected?.id || null,
-    workflowName: workflowName || null,
-    enabled: !!selected,
-  })
-
-  // File editor controller (encapsulated in features/fileviewer)
-  const fileEditor = useFileEditorController({ idToken, enabled: !!selected, sessionId: selected?.id || null })
   // Agent modal controller (encapsulated in features/agents)
   const agent = useAgentModalController({
     idToken,
@@ -407,12 +310,6 @@ export default function Sessions() {
       />
 
       <AgentModal
-        open={agent.open}
-        mode={agent.mode}
-        initial={agent.initial || { name: selected?.id || '', description: '', workflowName: workflowName || '', tools: [] }}
-        tools={agent.tools}
-        onClose={() => agent.setOpen(false)}
-        onSave={agent.onSave}
         open={agent.open}
         mode={agent.mode}
         initial={agent.initial || { name: selected?.id || '', description: '', workflowName: workflowName || '', tools: [] }}

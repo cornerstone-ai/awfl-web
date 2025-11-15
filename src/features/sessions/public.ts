@@ -8,7 +8,6 @@ export { SessionDetail } from './components/SessionDetail'
 export { useSessionsList } from './hooks/useSessionsList'
 export { useScrollHome } from './hooks/useScrollHome'
 export { useSessionPolling } from './hooks/useSessionPolling'
-export { useStickyScroll } from './hooks/useStickyScroll'
 export { useSessionSelection } from './hooks/useSessionSelection'
 
 // Utils and mappers (re-export via local wrappers)
