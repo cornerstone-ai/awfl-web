@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthProvider'
 // Components
 import { SessionSidebar, SessionDetail, useSessionSelection, filterSessionsByQuery, mapTopicInfoToSession, getWorkflowName } from '../features/sessions/public'
 import { TaskModal } from '../features/tasks/public'
-import { AgentModal, useAgentModalController } from '../features/agents/public'
+import { AgentModal, useAgentModalController, useSessionAgentConfig } from '../features/agents/public'
 import { SidebarNav } from '../features/sidebar/public'
 import { FileSystemSidebar } from '../features/filesystem/public'
 import { FileEditorModal, useFileEditorController } from '../features/fileviewer/public'
@@ -111,8 +111,11 @@ export default function Sessions(props: { projectId?: string | null } = {}) {
     enabled: !!selected,
   })
 
+  // Server-backed session agent config (single source of truth for agent + workflow)
+  const agentConfig = useSessionAgentConfig({ idToken, sessionId: selected?.id, enabled: !!selected })
+
   // Effective workflow chosen from agent configuration, falling back to session-derived
-  const effectiveWorkflowName = agent.workflowName || sessionWorkflowName || null
+  const effectiveWorkflowName = agentConfig.workflowName || sessionWorkflowName || null
 
   // Task counts for selected session
   const { counts: taskCounts, reload: reloadTaskCounts } = useTasksCounts({
@@ -354,7 +357,11 @@ export default function Sessions(props: { projectId?: string | null } = {}) {
         workflows={agent.workflows}
         workflowsLoading={agent.workflowsLoading}
         onClose={() => agent.setOpen(false)}
-        onSave={agent.onSave}
+        onSave={async (input) => {
+          await agent.onSave(input)
+          // Reload server-backed config so it reflects immediately and persists across reloads
+          await agentConfig.reload()
+        }}
       />
 
       <FileEditorModal
