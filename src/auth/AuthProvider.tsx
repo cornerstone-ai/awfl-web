@@ -12,9 +12,16 @@ export type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Debug flag for optional console logging
+const DEBUG_AUTH = (import.meta as any).env?.VITE_DEBUG_AUTH === '1' || (import.meta as any).env?.VITE_DEBUG_AUTH === 'true'
+const dlog = (...args: any[]) => {
+  if (DEBUG_AUTH) console.log('[auth]', ...args)
+}
+
 // Refresh the token slightly before it expires. Fallback to a sane interval when exp cannot be parsed.
 const REFRESH_SKEW_MS = 60_000 // 1 minute early
 const FALLBACK_REFRESH_MS = 10 * 60_000 // 10 minutes
+const FOCUS_NEAR_EXPIRY_MS = 5 * 60_000 // only force-refresh on focus if <5m left
 
 function parseJwtExpMs(token: string | null): number | null {
   if (!token) return null
@@ -37,6 +44,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshTimeoutRef = useRef<number | null>(null)
   const lastForcedRefreshAtRef = useRef<number>(0)
+  const lastUidRef = useRef<string | null>(null)
+  const lastTokenRef = useRef<string | null>(null)
+  const initDoneRef = useRef(false)
 
   const clearRefreshTimer = () => {
     if (refreshTimeoutRef.current != null) {
@@ -52,33 +62,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const expMs = parseJwtExpMs(token)
     const now = Date.now()
     const delay = expMs ? Math.max(30_000, expMs - now - REFRESH_SKEW_MS) : FALLBACK_REFRESH_MS
+    dlog('scheduleRefresh', {
+      uid: u?.uid,
+      inMs: delay,
+      inMin: Math.round((delay / 60000) * 10) / 10,
+      expInMin: expMs ? Math.round(((expMs - now) / 60000) * 10) / 10 : null,
+    })
 
     refreshTimeoutRef.current = window.setTimeout(async () => {
       try {
-        // Force refresh to rotate the ID token
+        dlog('timer: forcing token refresh')
         await u.getIdToken(true)
       } catch {
         // Swallow; onIdTokenChanged will not fire if this fails, but we'll try again on next focus/interval
+        dlog('timer: force refresh failed (will retry later)')
       }
     }, delay)
   }
 
   useEffect(() => {
     const unsubscribe = onIdTokenChanged(auth, async (u) => {
-      setUser(u)
+      let token: string | null = null
       if (u) {
         try {
-          const t = await u.getIdToken()
-          setIdToken(t)
-          scheduleRefresh(u, t)
+          token = await u.getIdToken()
         } catch {
-          setIdToken(null)
-          clearRefreshTimer()
+          token = null
         }
+      }
+
+      const uid = u?.uid ?? null
+      const uidChanged = uid !== lastUidRef.current
+      const tokenChanged = token !== lastTokenRef.current
+
+      const expMs = parseJwtExpMs(token)
+      const minsLeft = expMs ? Math.round(((expMs - Date.now()) / 60000) * 10) / 10 : null
+
+      dlog('onIdTokenChanged', {
+        uid,
+        uidChanged,
+        tokenChanged,
+        minsLeft,
+      })
+
+      // Only update React state if values actually changed to avoid wide re-renders
+      if (uidChanged || !initDoneRef.current) setUser(u)
+      if (tokenChanged || !initDoneRef.current) setIdToken(token)
+
+      if (u && token) {
+        if (tokenChanged || !initDoneRef.current) scheduleRefresh(u, token)
       } else {
-        setIdToken(null)
         clearRefreshTimer()
       }
+
+      // Commit refs after state update decisions
+      if (uidChanged) lastUidRef.current = uid
+      if (tokenChanged) lastTokenRef.current = token
+
+      if (!initDoneRef.current) initDoneRef.current = true
       setLoading(false)
     })
     return () => {
@@ -93,8 +134,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const u = auth.currentUser
       if (!u) return
       const now = Date.now()
-      if (now - lastForcedRefreshAtRef.current < 60_000) return // throttle to 1/min
+      if (now - lastForcedRefreshAtRef.current < 60_000) {
+        dlog('focus refresh throttled (<=1/min)')
+        return // throttle to 1/min
+      }
+
+      const token = lastTokenRef.current
+      const expMs = parseJwtExpMs(token)
+      const msLeft = expMs ? expMs - now : null
+      const nearExpiry = msLeft == null ? false : msLeft <= FOCUS_NEAR_EXPIRY_MS
+
+      dlog('focus/visibility: considering refresh', {
+        msLeft,
+        minsLeft: msLeft != null ? Math.round((msLeft / 60000) * 10) / 10 : null,
+        nearExpiry,
+      })
+
+      if (!nearExpiry) return
       lastForcedRefreshAtRef.current = now
+      dlog('focus/visibility: forcing token refresh')
       u.getIdToken(true).catch(() => {})
     }
 

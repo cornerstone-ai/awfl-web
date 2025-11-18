@@ -51,6 +51,17 @@ export function SessionSidebar(props: SessionSidebarProps) {
           <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {sessions.map((s) => {
               const selected = s.id === selectedId
+              const titleText = s.title && s.title.trim().length > 0 ? s.title : s.id
+              let subtitleText: string = s.updatedAt
+              try {
+                const d = new Date(s.updatedAt)
+                if (!Number.isNaN(d.getTime())) {
+                  subtitleText = d.toLocaleString()
+                }
+              } catch {
+                // keep raw updatedAt if parsing fails
+              }
+
               return (
                 <li key={s.id}>
                   <button
@@ -67,13 +78,13 @@ export function SessionSidebar(props: SessionSidebarProps) {
                     }}
                   >
                     <div style={{ overflow: 'hidden' }}>
-                      <div style={{ fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>
-                      <div style={{ fontSize: 12, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.summary || s.id}</div>
+                      <div style={{ fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titleText}</div>
+                      <div style={{ fontSize: 12, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitleText}</div>
                     </div>
                   </button>
                 </li>
-              )}
-            )}
+              )
+            })}
           </ul>
         )}
       </div>
