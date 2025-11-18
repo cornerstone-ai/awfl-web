@@ -13,6 +13,8 @@ export type UseWorkflowExecParams = {
   idToken?: string | null
   enabled?: boolean
   pollMs?: number
+  // Optional agent context; when provided, executions will include this agentId
+  agentId?: string | null
 }
 
 export type UseWorkflowExecResult = {
@@ -21,7 +23,12 @@ export type UseWorkflowExecResult = {
   running: boolean
   error: string | null
   reload: () => void
-  start: (workflowName: string, params?: Record<string, any>) => Promise<void>
+  // Optional ctx allows overriding session/agent for one-shot starts (e.g., immediately after creating a new session)
+  start: (
+    workflowName: string,
+    params?: Record<string, any>,
+    ctx?: { sessionId?: string; agentId?: string }
+  ) => Promise<void>
   stop: (opts?: { includeDescendants?: boolean; workflows?: string[]; workflow?: string }) => Promise<void>
 }
 
@@ -33,7 +40,7 @@ function normalizeStatus(s?: string | null): string | null {
 }
 
 export function useWorkflowExec(params: UseWorkflowExecParams): UseWorkflowExecResult {
-  const { sessionId, idToken, enabled = true, pollMs = 8000 } = params
+  const { sessionId, idToken, enabled = true, pollMs = 8000, agentId: hookAgentId } = params
 
   const [latest, setLatest] = useState<LatestExecItem | null>(null)
   const [status, setStatus] = useState<string | null>(null)
@@ -112,9 +119,16 @@ export function useWorkflowExec(params: UseWorkflowExecParams): UseWorkflowExecR
   const running = status === 'Running'
 
   const start = useCallback(
-    async (workflowName: string, params?: Record<string, any>) => {
-      if (!sessionId) return
+    async (
+      workflowName: string,
+      params?: Record<string, any>,
+      ctx?: { sessionId?: string; agentId?: string }
+    ) => {
+      const sId = ctx?.sessionId || sessionId
+      if (!sId) return
       setError(null)
+      // Prefer agentId provided via ctx, else from hook param, else from params
+      const aId = ctx?.agentId || hookAgentId || (params as any)?.agentId
       // Fire-and-forget the execute call so callers (e.g., Submit button) don't block on the response body.
       // Any errors will be captured into this hook's error state.
       const modelValue = params?.model ?? 'gpt-5'
@@ -122,7 +136,7 @@ export function useWorkflowExec(params: UseWorkflowExecParams): UseWorkflowExecR
       client
         .workflowsExecute({
           workflowName,
-          params: { sessionId, ...(params || {}), model: modelValue, fund: fundValue },
+          params: { sessionId: sId, ...(aId ? { agentId: aId } : {}), ...(params || {}), model: modelValue, fund: fundValue },
         })
         .then(() => {
           reload()
@@ -131,7 +145,7 @@ export function useWorkflowExec(params: UseWorkflowExecParams): UseWorkflowExecR
           setError(e?.message || String(e))
         })
     },
-    [client, sessionId, reload]
+    [client, sessionId, hookAgentId, reload]
   )
 
   const stop = useCallback(

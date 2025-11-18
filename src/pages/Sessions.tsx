@@ -129,13 +129,6 @@ export default function Sessions(props: { projectId?: string | null } = {}) {
   // Compute workflow name based on session and env
   const sessionWorkflowName = getWorkflowName(selected?.id)
 
-  // Single shared workflow exec hook for this page
-  const { status: wfStatus, running: wfRunning, error: wfError, start: startWf, stop: stopWf } = useWorkflowExec({
-    sessionId: selected?.id,
-    idToken,
-    enabled: !!selected,
-  })
-
   // Agent modal controller (encapsulated in features/agents)
   const agent = useAgentModalController({
     idToken,
@@ -146,6 +139,14 @@ export default function Sessions(props: { projectId?: string | null } = {}) {
 
   // Server-backed session agent config (single source of truth for agent + workflow)
   const agentConfig = useSessionAgentConfig({ idToken, sessionId: selected?.id, enabled: !!selected })
+
+  // Single shared workflow exec hook for this page; include agentId when configured
+  const { status: wfStatus, running: wfRunning, error: wfError, start: startWf, stop: stopWf } = useWorkflowExec({
+    sessionId: selected?.id,
+    idToken,
+    enabled: !!selected,
+    agentId: agentConfig.agent?.id || null,
+  })
 
   // Effective workflow chosen from agent configuration, falling back to session-derived
   const effectiveWorkflowName = agentConfig.workflowName || sessionWorkflowName || null
@@ -298,6 +299,19 @@ export default function Sessions(props: { projectId?: string | null } = {}) {
       // Prefer linking to an existing agent if explicitly selected
       if (agentId) {
         await agentsApi.linkSessionAgent(id, agentId)
+        // Attempt to resolve agent's configured workflow for initial kick-off
+        let wfName: string | null = null
+        try {
+          const ag = await agentsApi.getAgentById(agentId)
+          wfName = ag?.workflowName || null
+        } catch {
+          wfName = null
+        }
+        // Fallback to session-derived workflow if agent does not declare one
+        if (!wfName) wfName = getWorkflowName(id) || null
+        if (wfName) {
+          await startWf(wfName, { reason: 'new-session' }, { sessionId: id, agentId })
+        }
         if (selected?.id === id) await agentConfig.reload()
         return
       }
@@ -315,12 +329,21 @@ export default function Sessions(props: { projectId?: string | null } = {}) {
         const newAgent = await agentsApi.saveAgent({ name: workflowName, description: '', workflowName, tools: defaultTools })
         if (newAgent?.id) {
           await agentsApi.linkSessionAgent(id, newAgent.id)
+          // Kick off the selected workflow via the newly created agent
+          await startWf(workflowName, { reason: 'new-session' }, { sessionId: id, agentId: newAgent.id })
           if (selected?.id === id) await agentConfig.reload()
         }
+        return
+      }
+
+      // No agent selection and no workflow => default to session-only execution
+      const fallbackWf = getWorkflowName(id)
+      if (fallbackWf) {
+        await startWf(fallbackWf, { reason: 'new-session' }, { sessionId: id })
       }
     } catch (e) {
       // soft-fail
-      console.warn('Failed to set up agent for new session', e)
+      console.warn('Failed to set up agent/workflow execution for new session', e)
     }
   }
 
