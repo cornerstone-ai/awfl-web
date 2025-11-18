@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { makeApiClient } from '../../../api/apiClient'
-import type { ConsumerStatus, ConsumerType } from '../types'
+import type { ConsumerStatus } from '../types'
+import { mapLockStatusToConsumerStatus } from '../mappers'
 
 export type UseConsumerStatusArgs = {
   idToken?: string
@@ -8,12 +9,6 @@ export type UseConsumerStatusArgs = {
   consumerId?: string | null
   enabled?: boolean
   intervalMs?: number
-}
-
-function normalizeType(t: unknown): ConsumerType | null {
-  if (typeof t !== 'string') return null
-  const v = t.trim().toUpperCase()
-  return v === 'LOCAL' || v === 'CLOUD' ? (v as ConsumerType) : null
 }
 
 export function useConsumerStatus({ idToken, projectId, consumerId, enabled, intervalMs = 4000 }: UseConsumerStatusArgs) {
@@ -42,19 +37,7 @@ export function useConsumerStatus({ idToken, projectId, consumerId, enabled, int
       const json: any = await client.consumerLockStatus(projectId, { ...(ropts as any), signal })
       if (!mountedRef.current) return
 
-      const lock = json?.lock ?? null
-      const ctype = normalizeType(lock?.consumerType)
-      const mapped: ConsumerStatus = {
-        locked: !!json?.active,
-        consumerId: (lock?.consumerId ?? null) as string | null,
-        consumerType: ctype,
-        remainingMs: typeof lock?.expiresInMs === 'number' ? lock.expiresInMs : 0,
-        leaseMs: typeof lock?.leaseMs === 'number' ? lock.leaseMs : null,
-        expiresAt: typeof lock?.expiresAt === 'number' ? new Date(lock.expiresAt).toISOString() : null,
-        ownedByYou: consumerId ? (lock?.consumerId === consumerId) : undefined,
-        now: typeof json?.now === 'number' ? new Date(json.now).toISOString() : new Date().toISOString(),
-      }
-
+      const mapped = mapLockStatusToConsumerStatus(json, consumerId ?? undefined)
       setData(mapped)
     } catch (err) {
       if (!mountedRef.current) return
