@@ -102,6 +102,14 @@ tools
   - src/hooks/useAgentsApi.ts: type ToolItem
   - src/types/public.ts: re-exports type ToolItem
 
+workflows
+- Exports
+  - Hooks: useWorkflowsList
+  - Components: WorkflowSelector (and props)
+- Used in
+  - src/features/agents/AgentModal.tsx: WorkflowSelector
+  - src/features/agents/hooks/useAgentModalController.ts: useWorkflowsList
+
 yoj
 - Exports
   - Hooks: useTopicContextYoj
@@ -125,3 +133,9 @@ How to update
 
 Notes
 - This map is intentionally high level. Internal files should not be imported across features; only barrels appear here.
+
+Appendix: Theming notes
+- The Yoj message list and collapsed group card are themeable via CSS custom properties on a wrapping container.
+- YojMessageList tokens: --yoj-user-bg, --yoj-user-border, --yoj-user-label; --yoj-system-bg, --yoj-system-border, --yoj-system-label; --yoj-assistant-bg, --yoj-assistant-border, --yoj-assistant-label; --yoj-toolcalls-bg, --yoj-toolcalls-border, --yoj-toolcalls-title, --yoj-toolcall-name; --yoj-code-bg; --yoj-meta.
+- CollapsedGroupCard tokens: --yoj-cg-bg, --yoj-cg-border, --yoj-cg-radius, --yoj-cg-padding, --yoj-cg-label-color, --yoj-cg-desc-color; toggle: --yoj-cg-toggle-border, --yoj-cg-toggle-color, --yoj-cg-toggle-bg, --yoj-cg-toggle-bg-hover, --yoj-cg-toggle-bg-expanded, --yoj-cg-toggle-bg-expanded-hover; body: --yoj-cg-body-bg, --yoj-cg-body-border, --yoj-cg-body-radius, --yoj-cg-body-padding; toast: --yoj-cg-toast-bg, --yoj-cg-toast-color, --yoj-cg-toast-border.
+- See the respective CSS modules for defaults and class structure.

@@ -1,4 +1,4 @@
-import { getCookie } from '../utils/cookies'
+import { getSelectedProjectId } from '../features/projects/public'
 
 export type ApiClientOptions = {
   idToken?: string
@@ -24,7 +24,7 @@ export function buildHeaders(opts: ApiClientOptions, ropts?: RequestOptions) {
   if (opts.idToken) headers['Authorization'] = `Bearer ${opts.idToken}`
   if (opts.skipAuth) headers['X-Skip-Auth'] = '1'
   if (!ropts?.noProjectHeader) {
-    headers['x-project-id'] = getCookie('awfl.projectId') || ''
+    headers['x-project-id'] = getSelectedProjectId() || ''
   }
   // Merge extra per-request headers last to allow overrides
   if (ropts?.extraHeaders) {

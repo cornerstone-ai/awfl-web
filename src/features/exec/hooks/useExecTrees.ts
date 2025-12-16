@@ -40,7 +40,7 @@ function normalizeExecNodes(input: any): ExecNode[] {
       out.push(node)
     } catch (e) {
       // skip bad item
-      // eslint-disable-next-line no-console
+       
       console.warn('normalizeExecNodes: skipped bad item', e)
     }
   }

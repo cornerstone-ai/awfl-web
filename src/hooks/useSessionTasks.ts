@@ -122,7 +122,7 @@ export function useSessionTasks({
           void startWf(workflowName, { query })
         } catch (e) {
           if (import.meta?.env?.DEV) {
-            // eslint-disable-next-line no-console
+             
             console.debug('[useSessionTasks] startWf after task create scheduling failed', e)
           }
         }

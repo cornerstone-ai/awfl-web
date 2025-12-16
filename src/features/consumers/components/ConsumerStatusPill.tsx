@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useConsumerStatus } from '../hooks/useConsumerStatus'
+import { useProducerControls } from '../hooks/useProducerControls'
 import { Tooltip } from '../../ui/public'
 
 export type ConsumerStatusPillProps = {
@@ -27,13 +28,50 @@ function getOrMakeClientId(): string {
 
 export function ConsumerStatusPill({ idToken, projectId, enabled, consumerId: consumerIdProp, intervalMs }: ConsumerStatusPillProps) {
   const consumerId = useMemo(() => consumerIdProp ?? getOrMakeClientId(), [consumerIdProp])
-  const { status } = useConsumerStatus({ idToken, projectId, consumerId, enabled, intervalMs })
+  const { status, reload } = useConsumerStatus({ idToken, projectId, consumerId, enabled, intervalMs })
+  const { start, stop, loading: pending } = useProducerControls({ idToken, projectId, enabled })
 
   const type = status?.consumerType // 'LOCAL' | 'CLOUD' | null
   // Treat the reported type as the source of truth for which side is active.
   const localActive = type === 'LOCAL'
   const cloudActive = type === 'CLOUD'
-  const playDisabled = localActive // Disable starting cloud when local holds/claims the lock
+
+  // Track the user's intended action during the in-flight request so the tooltip/label
+  // doesn't flip from "Starting…" to "Stopping…" just because the poll tick updated the lock.
+  const [intent, setIntent] = useState<'start' | 'stop' | null>(null)
+  useEffect(() => {
+    if (!pending) setIntent(null)
+  }, [pending])
+
+  const cannotControlCloud = !enabled || !projectId || !idToken
+  const playDisabled = !!(localActive || pending || cannotControlCloud)
+
+  const intentText = intent === 'stop' ? 'Stopping…' : intent === 'start' ? 'Starting…' : null
+  const disabledReason = localActive
+    ? 'Disabled: Local consumer holds the lock'
+    : pending
+    ? intentText || (cloudActive ? 'Working…' : 'Working…')
+    : cannotControlCloud
+    ? 'Disabled: Missing auth or project'
+    : ''
+
+  async function onClick() {
+    if (playDisabled) return
+    try {
+      if (cloudActive) {
+        setIntent('stop')
+        const res = await stop()
+        if (res) console.log('[producer.stop] response:', res)
+      } else {
+        setIntent('start')
+        const res = await start({})
+        if (res) console.log('[producer.start] response:', res)
+      }
+    } finally {
+      // Nudge the status hook to refresh immediately rather than waiting for the next poll tick
+      reload()
+    }
+  }
 
   const baseSideStyle: React.CSSProperties = {
     padding: '4px 8px',
@@ -68,6 +106,12 @@ export function ConsumerStatusPill({ idToken, projectId, enabled, consumerId: co
     alignItems: 'stretch',
     background: 'white',
   }
+
+  // Button labels and titles should respect the intent while pending
+  const normalActionLabel = cloudActive ? 'Stop cloud consumer' : 'Start cloud consumer'
+  const pendingLabel = intent === 'stop' ? 'Stopping…' : intent === 'start' ? 'Starting…' : 'Working…'
+  const buttonAriaLabel = pending ? pendingLabel : normalActionLabel
+  const buttonTitle = disabledReason || (pending ? pendingLabel : normalActionLabel)
 
   return (
     <div style={containerStyle}>
@@ -104,25 +148,33 @@ export function ConsumerStatusPill({ idToken, projectId, enabled, consumerId: co
         aria-label={cloudActive ? 'Consumer lock: CLOUD' : 'Cloud consumer'}
       >
         <span aria-hidden style={{ display: 'inline-block', lineHeight: 1 }}>☁️</span>
-        {/* Placeholder control: disable play when local holds the lock */}
-        <button
-          type="button"
-          disabled={playDisabled}
-          aria-label={cloudActive ? 'Stop cloud consumer' : 'Start cloud consumer'}
-          title={playDisabled ? 'Disabled: Local consumer holds the lock' : (cloudActive ? 'Stop cloud consumer' : 'Start cloud consumer')}
-          style={{
-            marginLeft: 6,
-            opacity: playDisabled ? 0.35 : 0.6,
-            color: 'inherit',
-            background: 'transparent',
-            border: 'none',
-            padding: 0,
-            cursor: playDisabled ? 'not-allowed' : 'pointer',
-            lineHeight: 1,
-          }}
+        {/* Start/Stop control: disabled when local holds the lock, when pending, or when auth/project missing */}
+        <Tooltip
+          content={disabledReason || (pending ? pendingLabel : normalActionLabel)}
+          placement="bottom"
+          align="center"
+          disabled={!playDisabled}
         >
-          {cloudActive ? '■' : '▶︎'}
-        </button>
+          <button
+            type="button"
+            disabled={playDisabled}
+            onClick={onClick}
+            aria-label={buttonAriaLabel}
+            title={buttonTitle}
+            style={{
+              marginLeft: 6,
+              opacity: playDisabled ? 0.35 : 1,
+              color: 'inherit',
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              cursor: playDisabled ? 'not-allowed' : 'pointer',
+              lineHeight: 1,
+            }}
+          >
+            {pending ? '…' : cloudActive ? '■' : '▶︎'}
+          </button>
+        </Tooltip>
       </div>
     </div>
   )

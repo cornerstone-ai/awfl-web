@@ -27,6 +27,8 @@ export interface SessionDetailProps {
   sessionTasks?: TaskRecord[]
   onEditTask: (t: TaskRecord) => void
   onDeleteTask: (t: TaskRecord) => void
+  assistantName?: string
+  hideExecGutter?: boolean
 
   // Scrolling
   containerRef: Ref<HTMLDivElement | null>
@@ -45,6 +47,9 @@ export interface SessionDetailProps {
   submitting?: boolean
   onSubmit: (text: string) => void | Promise<void>
   onStop: () => void | Promise<void>
+
+  // Latest exec status error (e.g., when status === Failed)
+  execStatusError?: string | null
 }
 
 export function SessionDetail(props: SessionDetailProps) {
@@ -67,6 +72,8 @@ export function SessionDetail(props: SessionDetailProps) {
     sessionTasks,
     onEditTask,
     onDeleteTask,
+    assistantName,
+    hideExecGutter,
     containerRef,
     bottomRef,
     topRef,
@@ -79,6 +86,7 @@ export function SessionDetail(props: SessionDetailProps) {
     submitting,
     onSubmit,
     onStop,
+    execStatusError,
   } = props
 
   const [text, setText] = useState('')
@@ -190,12 +198,19 @@ export function SessionDetail(props: SessionDetailProps) {
         messages={messages}
         running={running}
         execError={execError}
+        assistantName={assistantName}
+        hideExecGutter={hideExecGutter}
         containerRef={containerRef}
         bottomRef={bottomRef}
         topRef={topRef}
         sessionId={sessionId || undefined}
         idToken={idToken || undefined}
       />
+
+      {/* Latest exec status error banner (e.g., when status === Failed) */}
+      {execStatusError ? (
+        <ErrorBanner variant="strong">{execStatusError}</ErrorBanner>
+      ) : null}
 
       {/* Prompt composer */}
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

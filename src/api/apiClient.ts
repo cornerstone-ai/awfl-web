@@ -38,6 +38,14 @@ export function makeApiClient(opts: ApiClientOptions) {
       return await postJson('/workflows/exec/tree', body || {}, opts, ropts)
     },
 
+    // Workflows service under /workflows
+    async listWorkflows(params?: { location?: string | null }, ropts?: RequestOptions) {
+      const q = new URLSearchParams()
+      if (params?.location) q.set('location', params.location)
+      const qs = q.toString() ? `?${q.toString()}` : ''
+      return await getJson(`/workflows/list${qs}`, opts, ropts)
+    },
+
     // Projects service under /workflows/projects
     async projectsList(params?: { limit?: number; order?: 'asc' | 'desc' }, ropts?: RequestOptions) {
       const q = new URLSearchParams()
@@ -46,12 +54,35 @@ export function makeApiClient(opts: ApiClientOptions) {
       const qs = q.toString() ? `?${q.toString()}` : ''
       return await getJson(`/workflows/projects${qs}`, opts, ropts)
     },
+    async projectsCreate(body: { remote?: string | null; name?: string | null; live?: boolean | null }, ropts?: RequestOptions) {
+      // Create a project via POST /workflows/projects
+      // Accept optional name/remote/live; server generates id and returns { project } or the project object
+      const payload: any = {}
+      if (body && typeof body === 'object') {
+        if (body.remote != null && body.remote !== '') payload.remote = body.remote
+        if (body.name != null && String(body.name).trim() !== '') payload.name = String(body.name).trim()
+        if (body.live != null) payload.live = !!body.live
+      }
+      return await postJson('/workflows/projects', payload, opts, ropts)
+    },
 
     // Consumer lock status under /workflows/projects/:projectId/consumer-lock/status
     async consumerLockStatus(projectId: string, ropts?: RequestOptions) {
       if (!projectId) throw new Error('consumerLockStatus: projectId is required')
       const path = `/workflows/projects/${encodeURIComponent(projectId)}/consumer-lock/status`
       return await getJson(path, opts, ropts)
+    },
+
+    // Producer controls under /workflows/producer
+    async producerStart(body?: any, ropts?: RequestOptions) {
+      // POST /workflows/producer/start — requires Authorization and X-Project-Id headers
+      // Optional JSON body supports { sessionId, since_id, since_time, leaseMs, eventsHeartbeatMs, reconnectBackoffMs, workspaceId, workspaceTtlMs, localDocker, localDockerImage, localDockerArgs }
+      const payload = body && typeof body === 'object' ? body : {}
+      return await postJson('/workflows/producer/start', payload, opts, ropts)
+    },
+    async producerStop(ropts?: RequestOptions) {
+      // POST /workflows/producer/stop — requires Authorization and X-Project-Id headers
+      return await postJson('/workflows/producer/stop', {}, opts, ropts)
     },
 
     // Tasks service under /workflows/tasks

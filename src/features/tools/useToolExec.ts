@@ -4,8 +4,8 @@ import type { ToolItem } from './types'
 
 function uuidv4() {
   try {
-    // @ts-ignore
-    if (typeof crypto !== 'undefined' && crypto?.randomUUID) return crypto.randomUUID()
+    const c: any = (globalThis as any)?.crypto
+    if (c && typeof c.randomUUID === 'function') return c.randomUUID()
   } catch {}
   // Fallback simple UUID v4 generator
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -71,5 +71,28 @@ export function useToolExec(params: { idToken?: string | null; enabled?: boolean
     [execTool]
   )
 
-  return { execTool, runCommand }
+  // New helpers for file tools under tools-CliTools
+  const readFile = useCallback(
+    async (filepath: string, opts?: ExecOptions) => {
+      const tool: { workflowName: string; function: { name: string } } = { workflowName: 'tools-CliTools', function: { name: 'READ_FILE' } }
+      // Default background=true for CLI tools unless explicitly overridden
+      const background = opts?.background !== undefined ? opts.background : true
+      const merged: ExecOptions = { ...opts, background }
+      return await execTool(tool as ToolItem, { filepath }, merged)
+    },
+    [execTool]
+  )
+
+  const updateFile = useCallback(
+    async (filepath: string, content: string, opts?: ExecOptions) => {
+      const tool: { workflowName: string; function: { name: string } } = { workflowName: 'tools-CliTools', function: { name: 'UPDATE_FILE' } }
+      // Default background=true for CLI tools unless explicitly overridden
+      const background = opts?.background !== undefined ? opts.background : true
+      const merged: ExecOptions = { ...opts, background }
+      return await execTool(tool as ToolItem, { filepath, content }, merged)
+    },
+    [execTool]
+  )
+
+  return { execTool, runCommand, readFile, updateFile }
 }

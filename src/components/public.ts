@@ -7,7 +7,7 @@ export { SessionHeader } from './sessions/SessionHeader'
 export { YojMessageList } from './sessions/YojMessageList'
 
 export { TaskModal } from './tasks/TaskModal'
-export { AgentModal } from './agents/AgentModal'
+// Legacy AgentModal export removed; use features/agents/public instead
 
 export { ErrorBanner } from './common/ErrorBanner'
 export { Collapsible } from './common/Collapsible'

@@ -17,6 +17,8 @@ interface SessionItemsViewProps {
   messages: any[]
   running: boolean
   execError?: string | null
+  assistantName?: string
+  hideExecGutter?: boolean
   // Refs for scroll/anchor management
   containerRef: Ref<HTMLDivElement | null>
   bottomRef?: Ref<HTMLDivElement | null>
@@ -36,6 +38,8 @@ export function SessionItemsView({
   messages,
   running,
   execError,
+  assistantName,
+  hideExecGutter,
   containerRef,
   bottomRef,
   topRef,
@@ -103,7 +107,13 @@ export function SessionItemsView({
         ) : messages.length === 0 && !running && !execError ? (
           <div style={{ color: '#6b7280', textAlign: 'left' }}>No messages returned.</div>
         ) : (
-          <YojMessageList messages={messages as any} sessionId={sessionId || undefined} idToken={idToken || undefined} />
+          <YojMessageList
+            messages={messages as any}
+            sessionId={sessionId || undefined}
+            idToken={idToken || undefined}
+            assistantName={assistantName}
+            hideExecGutter={hideExecGutter}
+          />
         )}
         {/* Bottom sentinel for IO-driven near-bottom detection; disable overflow anchoring here */}
         <div ref={bottomRef as any} style={{ height: 1, overflowAnchor: 'none' as any }} />
