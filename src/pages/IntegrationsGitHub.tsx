@@ -1,14 +1,14 @@
 import GitHubIntegrationManager from '../components/integrations/GitHubIntegrationManager'
-import { getCookie, setCookie } from '../utils/cookies'
+import { getSelectedProjectId, setSelectedProjectId } from '../features/projects/public'
 
 export default function IntegrationsGitHub() {
-  const initial = getCookie('awfl.projectId') || ''
+  const initial = getSelectedProjectId() || ''
 
   return (
     <div style={{ padding: 16, height: '100%', boxSizing: 'border-box', overflow: 'auto' }}>
       <GitHubIntegrationManager
         initialProjectId={initial}
-        onProjectChange={(id) => setCookie('awfl.projectId', id)}
+        onProjectChange={(id) => setSelectedProjectId(id)}
       />
     </div>
   )

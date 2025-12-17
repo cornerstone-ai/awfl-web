@@ -25,7 +25,25 @@ export function mapLockStatusToConsumerStatus(raw: any, selfConsumerId?: string 
     return { locked, consumerId, consumerType, remainingMs, leaseMs, expiresAt, ownedByYou, now }
   }
 
-  // Expected shape per backend sample:
+  // Newer shape:
+  // { ok, locked, holder: { consumerId, consumerType, leaseMs, acquiredAt, refreshedAt, expiresAt }, msRemaining, now? }
+  if (raw && typeof raw === 'object' && ('holder' in raw || 'locked' in raw) && !('lock' in raw)) {
+    const locked = Boolean((raw as any).locked)
+    const holder = (raw as any).holder || {}
+    const consumerId = holder?.consumerId ?? null
+    const consumerType = normalizeType(holder?.consumerType)
+    const leaseMs = typeof holder?.leaseMs === 'number' ? holder.leaseMs : null
+    const nowIso = typeof (raw as any).now === 'number' || typeof (raw as any).now === 'string' ? toIso((raw as any).now) : new Date().toISOString()
+    let expiresAt: string | null = null
+    if (typeof holder?.expiresAt === 'number') expiresAt = toIso(holder.expiresAt)
+    else if (typeof holder?.expiresAt === 'string') expiresAt = holder.expiresAt
+    const remainingMs = Math.max(0, Number((raw as any).msRemaining ?? 0))
+    const ownedByYou = !!(selfConsumerId && consumerId && selfConsumerId === consumerId)
+
+    return { locked, consumerId, consumerType, remainingMs, leaseMs, expiresAt, ownedByYou, now: nowIso }
+  }
+
+  // Previous shape per backend sample:
   // { ok, active, now, lock: { consumerId, consumerType, leaseMs, acquiredAt, refreshedAt, expiresAt, expiresInMs } }
   const active = Boolean(raw?.active)
   const lock = raw?.lock ?? {}

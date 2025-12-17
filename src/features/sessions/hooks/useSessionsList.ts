@@ -5,6 +5,8 @@ import { makeApiClient } from '../../../api/apiClient'
 export type UseSessionsListParams = {
   userId?: string | null
   idToken?: string | null
+  // Optional: current project id. Used only to trigger refetch when it changes.
+  projectId?: string | null
   collection?: string
   field?: string
   order?: 'asc' | 'desc'
@@ -27,6 +29,7 @@ export function useSessionsList(params: UseSessionsListParams): UseSessionsListR
   const {
     userId,
     idToken,
+    projectId,
     collection = 'convo.sessions',
     field = 'update_time',
     order = 'desc',
@@ -42,6 +45,9 @@ export function useSessionsList(params: UseSessionsListParams): UseSessionsListR
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const bump = useRef(0)
+
+  const prevProjectIdRef = useRef<string | null | undefined>(undefined)
+  const firstLoadRef = useRef(true)
 
   const reload = useCallback(() => {
     bump.current++
@@ -60,7 +66,17 @@ export function useSessionsList(params: UseSessionsListParams): UseSessionsListR
         return
       }
 
-      setLoading(true)
+      const projectChanged = prevProjectIdRef.current !== projectId
+      const hardLoad = firstLoadRef.current || projectChanged
+
+      // Hard loads (first load or project switch) show loading and may clear stale sessions
+      if (hardLoad) {
+        setLoading(true)
+        if (projectChanged && projectId != null) {
+          setSessions([])
+        }
+      }
+
       try {
         const client = makeApiClient({ idToken: idToken ?? undefined, skipAuth })
         const body: any = { collection, field, order, start, end }
@@ -94,7 +110,14 @@ export function useSessionsList(params: UseSessionsListParams): UseSessionsListR
       } catch (e: any) {
         if (!cancelled) setError(e?.message || String(e))
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          // Only toggle loading off if we previously turned it on for a hard load
+          if (firstLoadRef.current || prevProjectIdRef.current !== projectId) {
+            setLoading(false)
+          }
+          firstLoadRef.current = false
+          prevProjectIdRef.current = projectId
+        }
       }
     }
 
@@ -104,7 +127,7 @@ export function useSessionsList(params: UseSessionsListParams): UseSessionsListR
       cancelled = true
       ac.abort()
     }
-  }, [userId, idToken, collection, field, order, start, end, limit, fieldType, enabled, mapDocToSession, bump.current])
+  }, [userId, idToken, projectId, collection, field, order, start, end, limit, fieldType, enabled, mapDocToSession, bump.current])
 
   return { sessions, loading, error, reload }
 }

@@ -55,7 +55,7 @@ export function parseLsA1F(output: string, parentPath: string): FsEntry[] {
   if (!output) return []
   const lines = output.split(/\r?\n/)
   const out: FsEntry[] = []
-  for (let raw of lines) {
+  for (const raw of lines) {
     if (!raw) continue
     // Strip color codes if any slipped through
     const line = raw.replace(/\u001b\[[0-9;]*m/g, '')

@@ -55,7 +55,7 @@ function normalizeYojMessages(arr: any[] | undefined | null): YojMessage[] {
       out.push(normalized)
     } catch (e) {
       // Swallow individual mapping errors to keep UI resilient
-      // eslint-disable-next-line no-console
+       
       console.warn('normalizeYojMessages: skipped bad item', e)
     }
   }

@@ -66,7 +66,7 @@ export function useCredsApi(params: UseCredsApiParams): UseCredsApiResult {
       setError(null)
       if (!enabled || (!idToken && !skipAuth)) {
         if ((import.meta as any)?.env?.DEV) {
-          // eslint-disable-next-line no-console
+           
           console.debug('[useCredsApi] skip load', { enabled, hasToken: !!idToken, skipAuth })
         }
         setCreds([])

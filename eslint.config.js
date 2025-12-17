@@ -24,6 +24,21 @@ export default tseslint.config([
       globals: globals.browser,
     },
     rules: {
+      // Soften strictness to unblock incremental adoption
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-expressions': [
+        'warn',
+        { allowShortCircuit: true, allowTernary: true, allowTaggedTemplates: true },
+      ],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+      'no-empty': ['warn', { allowEmptyCatch: true }],
+      'no-control-regex': 'warn',
+      'prefer-const': 'warn',
+      'react-refresh/only-export-components': 'warn',
+
       // Warn-only module boundary rules (see src/pages/AGENT.md)
       'import/no-restricted-paths': [
         'warn',

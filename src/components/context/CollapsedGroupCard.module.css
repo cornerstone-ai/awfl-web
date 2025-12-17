@@ -1,0 +1,115 @@
+/* CollapsedGroupCard theming via CSS custom properties
+
+Set these variables on a container that wraps CollapsedGroupCard to theme:
+- Container
+  --yoj-cg-bg: background of the card (default #eef2ff)
+  --yoj-cg-border: border color of the card (default #c7d2fe)
+  --yoj-cg-radius: border-radius for the card (default 8px)
+  --yoj-cg-padding: padding for the card (default 10px)
+  --yoj-cg-label-color: color for the group label (default #4338ca)
+  --yoj-cg-desc-color: color for the description text (default #374151)
+
+- Toggle button
+  --yoj-cg-toggle-border: button border color (default #d1d5db)
+  --yoj-cg-toggle-color: button text/icon color (default #111827)
+  --yoj-cg-toggle-bg: collapsed button background (default #f3f4f6)
+  --yoj-cg-toggle-bg-hover: collapsed button hover background (default #e5e7eb)
+  --yoj-cg-toggle-bg-expanded: expanded button background (default #dcfce7)
+  --yoj-cg-toggle-bg-expanded-hover: expanded button hover background (default #bbf7d0)
+
+- Body (expanded content)
+  --yoj-cg-body-bg: inner body background (default #ffffff)
+  --yoj-cg-body-border: inner body border color (default #e5e7eb)
+  --yoj-cg-body-radius: inner body border-radius (default 6px)
+  --yoj-cg-body-padding: inner body padding (default 10px)
+
+- Toast
+  --yoj-cg-toast-bg: toast background (default #fef3c7)
+  --yoj-cg-toast-color: toast text color (default #92400e)
+  --yoj-cg-toast-border: toast border color (default #fcd34d)
+*/
+
+.root {
+  background: var(--yoj-cg-bg, #eef2ff);
+  border: 1px solid var(--yoj-cg-border, #c7d2fe);
+  border-radius: var(--yoj-cg-radius, 8px);
+  padding: var(--yoj-cg-padding, 10px);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  overflow-x: hidden;
+  min-width: 0;
+  position: relative;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--yoj-cg-label-color, #4338ca);
+}
+
+.toggleButton {
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--yoj-cg-toggle-border, #d1d5db);
+  color: var(--yoj-cg-toggle-color, #111827);
+  padding: 4px 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--yoj-cg-toggle-bg, #f3f4f6);
+}
+
+/* Expanded state (driven by aria-pressed=true) */
+.toggleButton[aria-pressed="true"] {
+  background: var(--yoj-cg-toggle-bg-expanded, #dcfce7);
+}
+
+/* Hover states */
+.toggleButton:hover {
+  background: var(--yoj-cg-toggle-bg-hover, #e5e7eb);
+}
+
+.toggleButton[aria-pressed="true"]:hover {
+  background: var(--yoj-cg-toggle-bg-expanded-hover, #bbf7d0);
+}
+
+.description {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--yoj-cg-desc-color, #374151);
+}
+
+.body {
+  margin-top: 10px;
+  background: var(--yoj-cg-body-bg, #ffffff);
+  border: 1px solid var(--yoj-cg-body-border, #e5e7eb);
+  border-radius: var(--yoj-cg-body-radius, 6px);
+  padding: var(--yoj-cg-body-padding, 10px);
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.toast {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  background: var(--yoj-cg-toast-bg, #fef3c7);
+  color: var(--yoj-cg-toast-color, #92400e);
+  border: 1px solid var(--yoj-cg-toast-border, #fcd34d);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+}

@@ -57,7 +57,7 @@ export function useTasksCounts(params: UseTasksCountsParams): UseTasksCountsResu
 
       if (!enabled || !sessionId || (!idToken && !skipAuth)) {
         if ((import.meta as any)?.env?.DEV) {
-          // eslint-disable-next-line no-console
+           
           console.debug('[useTasksCounts] skip load', { enabled, sessionId, hasToken: !!idToken, skipAuth })
         }
         setCounts(null)
@@ -68,7 +68,7 @@ export function useTasksCounts(params: UseTasksCountsParams): UseTasksCountsResu
       try {
         const client = makeApiClient({ idToken: idToken ?? undefined, skipAuth })
         if ((import.meta as any)?.env?.DEV) {
-          // eslint-disable-next-line no-console
+           
           console.debug('[useTasksCounts] loading counts', { sessionId })
         }
         // Prefer by-session endpoint without status first, then bucket client-side
@@ -85,7 +85,7 @@ export function useTasksCounts(params: UseTasksCountsParams): UseTasksCountsResu
           }
         } catch (e) {
           if ((import.meta as any)?.env?.DEV) {
-            // eslint-disable-next-line no-console
+             
             console.debug('[useTasksCounts] by-session aggregate failed, falling back to per-status', e)
           }
           // fall through to per-status queries
@@ -104,7 +104,7 @@ export function useTasksCounts(params: UseTasksCountsParams): UseTasksCountsResu
                 return Array.isArray(tasks) ? tasks.length : 0
               } catch (err) {
                 if ((import.meta as any)?.env?.DEV) {
-                  // eslint-disable-next-line no-console
+                   
                   console.debug('[useTasksCounts] per-status request failed', { status, err })
                 }
                 return 0

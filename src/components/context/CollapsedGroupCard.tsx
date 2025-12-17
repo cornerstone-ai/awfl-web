@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from 'react'
 import { makeApiClient } from '../../api/apiClient'
 import { normalizeGroup } from '../../utils/collapse'
 import { ChevronIcon } from '../common/Collapsible'
+import styles from './CollapsedGroupCard.module.css'
+
+// Theming: see CollapsedGroupCard.module.css for available CSS custom properties.
+// Set variables like --yoj-cg-bg, --yoj-cg-border, --yoj-cg-label-color, etc. on a wrapping container.
 
 export function CollapsedGroupCard(props: {
   sessionId?: string
@@ -83,99 +87,27 @@ export function CollapsedGroupCard(props: {
     }
   }, [])
 
-  const bg = '#eef2ff'
-  const border = '#c7d2fe'
-  const labelColor = '#4338ca'
-
   return (
-    <div
-      ref={rootRef}
-      style={{
-        background: bg,
-        border: `1px solid ${border}`,
-        borderRadius: 8,
-        padding: 10,
-        width: '100%',
-        maxWidth: '100%',
-        boxSizing: 'border-box',
-        textAlign: 'left',
-        overflowX: 'hidden',
-        minWidth: 0,
-        position: 'relative',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: labelColor }}>
-          {normalizeGroup(label)}
-        </div>
+    <div ref={rootRef} className={styles.root}>
+      <div className={styles.header}>
+        <div className={styles.label}>{normalizeGroup(label)}</div>
         <button
           type="button"
           onClick={toggle}
           aria-pressed={resolvedExpanded}
           aria-label={resolvedExpanded ? 'Collapse group' : 'Expand group'}
           title={resolvedExpanded ? 'Collapse group' : 'Expand group'}
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            borderRadius: 6,
-            border: '1px solid #d1d5db',
-            background: resolvedExpanded ? '#dcfce7' : '#f3f4f6',
-            color: '#111827',
-            padding: '4px 6px',
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            lineHeight: 1,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = resolvedExpanded ? '#bbf7d0' : '#e5e7eb'
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = resolvedExpanded ? '#dcfce7' : '#f3f4f6'
-          }}
+          className={styles.toggleButton}
         >
           <ChevronIcon direction={resolvedExpanded ? 'up' : 'down'} size={12} />
         </button>
       </div>
-      {description ? (
-        <div style={{ marginTop: 6, fontSize: 12, color: '#374151' }}>{description}</div>
-      ) : null}
 
-      {resolvedExpanded && children ? (
-        <div
-          style={{
-            marginTop: 10,
-            background: '#ffffff',
-            border: '1px solid #e5e7eb',
-            borderRadius: 6,
-            padding: 10,
-            maxWidth: '100%',
-            overflowX: 'hidden',
-          }}
-        >
-          {children}
-        </div>
-      ) : null}
+      {description ? <div className={styles.description}>{description}</div> : null}
 
-      {toast ? (
-        <div
-          style={{
-            position: 'absolute',
-            right: 10,
-            bottom: 10,
-            background: '#fef3c7',
-            color: '#92400e',
-            border: '1px solid #fcd34d',
-            borderRadius: 6,
-            padding: '6px 8px',
-            fontSize: 12,
-          }}
-        >
-          {toast}
-        </div>
-      ) : null}
+      {resolvedExpanded && children ? <div className={styles.body}>{children}</div> : null}
+
+      {toast ? <div className={styles.toast}>{toast}</div> : null}
     </div>
   )
 }

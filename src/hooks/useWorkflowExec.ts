@@ -5,6 +5,7 @@ export type LatestExecItem = {
   execId: string
   created?: number
   status?: string
+  error?: string
   // other fields may be present
 }
 
@@ -13,6 +14,8 @@ export type UseWorkflowExecParams = {
   idToken?: string | null
   enabled?: boolean
   pollMs?: number
+  // Optional agent context; when provided, executions will include this agentId
+  agentId?: string | null
 }
 
 export type UseWorkflowExecResult = {
@@ -21,14 +24,27 @@ export type UseWorkflowExecResult = {
   running: boolean
   error: string | null
   reload: () => void
-  start: (workflowName: string, params?: Record<string, any>) => Promise<void>
+  // Optional ctx allows overriding session/agent for one-shot starts (e.g., immediately after creating a new session)
+  start: (
+    workflowName: string,
+    params?: Record<string, any>,
+    ctx?: { sessionId?: string; agentId?: string }
+  ) => Promise<void>
   stop: (opts?: { includeDescendants?: boolean; workflows?: string[]; workflow?: string }) => Promise<void>
 }
 
+function normalizeStatus(s?: string | null): string | null {
+  if (!s) return null
+  const u = String(s).trim()
+  if (!u) return null
+  return u.charAt(0).toUpperCase() + u.slice(1).toLowerCase()
+}
+
 export function useWorkflowExec(params: UseWorkflowExecParams): UseWorkflowExecResult {
-  const { sessionId, idToken, enabled = true, pollMs = 8000 } = params
+  const { sessionId, idToken, enabled = true, pollMs = 8000, agentId: hookAgentId } = params
 
   const [latest, setLatest] = useState<LatestExecItem | null>(null)
+  const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [, setLoading] = useState(false)
   const bump = useRef(0)
@@ -41,6 +57,16 @@ export function useWorkflowExec(params: UseWorkflowExecParams): UseWorkflowExecR
 
   const client = useMemo(() => makeApiClient({ idToken: idToken ?? undefined, skipAuth }), [idToken, skipAuth])
 
+  // Reset only on identity/enable changes
+  useEffect(() => {
+    // When the selected session or enabled flag changes, clear preserved states
+    if (!enabled || !sessionId) {
+      setLatest(null)
+      setStatus(null)
+      setError(null)
+    }
+  }, [sessionId, enabled])
+
   useEffect(() => {
     let cancelled = false
     const ac = new AbortController()
@@ -48,19 +74,27 @@ export function useWorkflowExec(params: UseWorkflowExecParams): UseWorkflowExecR
     async function fetchLatest() {
       setError(null)
       if (!enabled || !sessionId || (!idToken && !skipAuth)) {
-        setLatest(null)
+        // Do not fetch when disabled; reset is handled by the sessionId/enabled effect
         return
       }
       setLoading(true)
       try {
         const json: any = await client.workflowsStatusLatest(sessionId, 1, { signal: ac.signal })
         const item = Array.isArray(json?.items) && json.items.length > 0 ? json.items[0] : null
-        if (!cancelled) setLatest(item)
+        if (cancelled) return
+        if (item) {
+          // Update latest when we have an item
+          setLatest(item)
+          // Update status only when defined & non-empty
+          const ns = normalizeStatus(item.status)
+          if (ns) setStatus(ns)
+        } else {
+          // No items returned: preserve prior latest/status to avoid UI flicker
+        }
       } catch (e: any) {
-        // 404 is expected when none exist
+        // 404 or transient errors: surface error but preserve last known latest/status
         const msg = e?.message || String(e)
         if (!cancelled) setError(msg)
-        if (!cancelled) setLatest(null)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -83,29 +117,43 @@ export function useWorkflowExec(params: UseWorkflowExecParams): UseWorkflowExecR
     return () => clearInterval(t)
   }, [enabled, sessionId, pollMs, reload])
 
-  const normalizedStatus = useMemo(() => {
-    const s = latest?.status
-    if (!s) return null
-    // Normalize states like RUNNING/Running/running
-    const u = String(s).trim()
-    if (!u) return null
-    return u.charAt(0).toUpperCase() + u.slice(1).toLowerCase()
-  }, [latest?.status])
-
-  const running = normalizedStatus === 'Running'
+  const running = status === 'Running'
 
   const start = useCallback(
-    async (workflowName: string, params?: Record<string, any>) => {
-      if (!sessionId) return
+    async (
+      workflowName: string,
+      params?: Record<string, any>,
+      ctx?: { sessionId?: string; agentId?: string }
+    ) => {
+      const sId = ctx?.sessionId || sessionId
+      if (!sId) return
       setError(null)
-      // Fire-and-forget the execute call so callers (e.g., Submit button) don't block on the response body.
-      // Any errors will be captured into this hook's error state.
-      const modelValue = params?.model ?? 'gpt-5'
-      const fundValue = params?.fund ?? 1
+      // Prefer agentId provided via ctx, else from hook param, else from params
+      const aId = ctx?.agentId || hookAgentId || (params as any)?.agentId
+
+      // Defensively normalize params: require query and drop unsupported fields like `reason`
+      const rawParams = { ...(params || {}) }
+      if ('reason' in rawParams) delete (rawParams as any).reason
+      const modelValue = rawParams?.model ?? 'gpt-5'
+      const fundValue = rawParams?.fund ?? 1
+      const finalParams = {
+        ...rawParams,
+        query: typeof rawParams?.query === 'string' ? rawParams.query : '',
+        model: modelValue,
+        fund: fundValue,
+      }
+
+      // Inject session/agent context into params per API contract; do not send at top-level
+      const execParams = {
+        ...finalParams,
+        sessionId: sId,
+        ...(aId ? { agentId: aId } : {}),
+      }
+
       client
         .workflowsExecute({
           workflowName,
-          params: { sessionId, ...(params || {}), model: modelValue, fund: fundValue },
+          params: execParams,
         })
         .then(() => {
           reload()
@@ -114,7 +162,7 @@ export function useWorkflowExec(params: UseWorkflowExecParams): UseWorkflowExecR
           setError(e?.message || String(e))
         })
     },
-    [client, sessionId, reload]
+    [client, sessionId, hookAgentId, reload]
   )
 
   const stop = useCallback(
@@ -140,5 +188,5 @@ export function useWorkflowExec(params: UseWorkflowExecParams): UseWorkflowExecR
     [client, latest?.execId, reload]
   )
 
-  return { latest, status: normalizedStatus, running, error, reload, start, stop }
+  return { latest, status, running, error, reload, start, stop }
 }

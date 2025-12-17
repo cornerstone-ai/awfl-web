@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ToolSelector } from '../../features/tools/public'
-import type { ToolItem } from '../../features/tools/public'
+import { ToolSelector } from '../tools/public'
+import type { ToolItem } from '../tools/public'
+import { WorkflowSelector } from '../workflows/public'
 
 export type AgentModalProps = {
   open: boolean
   mode: 'create' | 'edit'
   initial: { id?: string; name: string; description?: string | null; workflowName?: string | null; tools?: string[] }
   tools: ToolItem[]
+  workflows: string[]
+  workflowsLoading?: boolean
   onClose: () => void
   onSave: (input: { id?: string; name: string; description?: string | null; workflowName?: string | null; tools?: string[] }) => Promise<void>
 }
 
-export function AgentModal({ open, mode, initial, tools, onClose, onSave }: AgentModalProps) {
+export function AgentModal({ open, mode, initial, tools, workflows, workflowsLoading, onClose, onSave }: AgentModalProps) {
   const [description, setDescription] = useState<string>('')
   const [workflowName, setWorkflowName] = useState<string>('')
   const [selectedTools, setSelectedTools] = useState<string[]>([])
@@ -52,7 +55,7 @@ export function AgentModal({ open, mode, initial, tools, onClose, onSave }: Agen
       <div
         style={{
           width: 'min(760px, 96vw)',
-          maxHeight: 'calc(100vh - 32px)', // fit within viewport minus overlay padding
+          maxHeight: 'calc(100vh - 32px)',
           background: '#fff',
           borderRadius: 8,
           border: '1px solid #e5e7eb',
@@ -120,21 +123,10 @@ export function AgentModal({ open, mode, initial, tools, onClose, onSave }: Agen
             />
           </label>
 
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 12, color: '#374151' }}>Workflow name</span>
-            <input
-              type="text"
-              value={workflowName}
-              onChange={(e) => setWorkflowName(e.target.value)}
-              placeholder="Workflow to execute for this agent"
-              style={{
-                border: '1px solid #e5e7eb',
-                borderRadius: 6,
-                padding: '8px 10px',
-                outline: 'none',
-              }}
-            />
-          </label>
+          <div style={{ display: 'grid', gap: 6 }}>
+            <div style={{ fontSize: 12, color: '#374151' }}>Workflow</div>
+            <WorkflowSelector workflows={workflows} value={workflowName} onChange={setWorkflowName} loading={!!workflowsLoading} />
+          </div>
 
           <div style={{ display: 'grid', gap: 8 }}>
             <div style={{ fontSize: 12, color: '#374151' }}>Tools</div>

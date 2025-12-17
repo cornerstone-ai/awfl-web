@@ -1,0 +1,138 @@
+/* YojMessageList theming classes
+   Consumers can override these via CSS custom properties on a wrapping container.
+   Custom properties referenced (with fallbacks provided):
+   --yoj-user-bg, --yoj-user-border, --yoj-user-label
+   --yoj-system-bg, --yoj-system-border, --yoj-system-label
+   --yoj-assistant-bg, --yoj-assistant-border, --yoj-assistant-label
+   --yoj-toolcalls-bg, --yoj-toolcalls-border, --yoj-toolcalls-title, --yoj-toolcall-name
+   --yoj-code-bg, --yoj-meta
+*/
+
+.yojList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+  text-align: left;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+
+.contentFlex {
+  flex: 1;
+  min-width: 0;
+}
+
+.branchWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.preText {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  text-align: left;
+  max-width: 100%;
+}
+
+.cardBodyStack,
+.nestedStack,
+.contentStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bubble {
+  border-radius: 8px;
+  padding: 10px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  overflow-x: hidden;
+  min-width: 0;
+  border: 1px solid transparent; /* real color via variant */
+}
+
+/* Variants by role */
+.bubbleUser {
+  background: var(--yoj-user-bg, #f0f9ff);
+  border-color: var(--yoj-user-border, #bae6fd);
+}
+.bubbleSystem {
+  background: var(--yoj-system-bg, #f9fafb);
+  border-color: var(--yoj-system-border, #e5e7eb);
+}
+.bubbleAssistant {
+  background: var(--yoj-assistant-bg, #f5f5f5);
+  border-color: var(--yoj-assistant-border, #e5e7eb);
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.labelUser { color: var(--yoj-user-label, #0369a1); }
+.labelSystem { color: var(--yoj-system-label, #6b7280); }
+.labelAssistant { color: var(--yoj-assistant-label, #374151); }
+
+.toolCallsBox {
+  background: var(--yoj-toolcalls-bg, #ffffff);
+  border: 1px solid var(--yoj-toolcalls-border, #e5e7eb);
+  border-radius: 6px;
+  padding: 8px;
+  max-width: 100%;
+}
+.toolCallsTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--yoj-toolcalls-title, #374151);
+  margin-bottom: 6px;
+}
+.toolCallsList {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toolCallItem {
+  list-style: disc;
+  overflow: hidden;
+}
+.toolCallName {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--yoj-toolcall-name, #111827);
+}
+.toolCallPre {
+  margin: 0;
+  margin-top: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  background: var(--yoj-code-bg, #f9fafb);
+  border: 1px solid var(--yoj-toolcalls-border, #e5e7eb);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.meta {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--yoj-meta, #9ca3af);
+}

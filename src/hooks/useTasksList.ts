@@ -58,7 +58,7 @@ function mapAnyToTask(obj: any): TaskRecord | null {
     return { id: String(id), status, title, description, sessionId, createdAt, updatedAt, raw: obj }
   } catch (e) {
     if ((import.meta as any)?.env?.DEV) {
-      // eslint-disable-next-line no-console
+       
       console.debug('[useTasksList] mapAnyToTask failed', e, obj)
     }
     return null
@@ -84,7 +84,7 @@ export function useTasksList(params: UseTasksListParams): UseTasksListResult {
       setError(null)
       if (!enabled || (!idToken && !skipAuth)) {
         if ((import.meta as any)?.env?.DEV) {
-          // eslint-disable-next-line no-console
+           
           console.debug('[useTasksList] skip load', { enabled, hasToken: !!idToken, skipAuth })
         }
         setTasks([])
@@ -99,7 +99,7 @@ export function useTasksList(params: UseTasksListParams): UseTasksListResult {
         if (st && st.toLowerCase() !== 'all') q.status = st
 
         if ((import.meta as any)?.env?.DEV) {
-          // eslint-disable-next-line no-console
+           
           console.debug('[useTasksList] loading', q)
         }
 
