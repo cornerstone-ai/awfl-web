@@ -1,4 +1,4 @@
-import type { Ref } from 'react'
+import { useEffect, useRef, type Ref } from 'react'
 import { TasksList } from '../tasks/TasksList'
 import { YojMessageList } from './YojMessageList'
 import { ErrorBanner } from '../common/ErrorBanner'
@@ -46,6 +46,18 @@ export function SessionItemsView({
   sessionId,
   idToken,
 }: SessionItemsViewProps) {
+  const hasTasks = (sessionTasks?.length || 0) > 0
+
+  // Show the loading indicator only once per status selection when there are no tasks yet.
+  const initialLoadingShownRef = useRef(false)
+  useEffect(() => {
+    initialLoadingShownRef.current = false
+  }, [activeTaskStatus])
+  const showInitialLoading = !!activeTaskStatus && loadingTasks && !hasTasks && !initialLoadingShownRef.current
+  useEffect(() => {
+    if (showInitialLoading) initialLoadingShownRef.current = true
+  }, [showInitialLoading])
+
   return (
     <div
       ref={containerRef}
@@ -91,17 +103,45 @@ export function SessionItemsView({
 
         {activeTaskStatus ? (
           <div>
+            {/* Visible mode switch header so first click is obvious */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span
+                style={{
+                  fontSize: 12,
+                  color: '#111827',
+                  background: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 999,
+                  padding: '2px 8px',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Tasks • {activeTaskStatus}
+              </span>
+              {showInitialLoading ? (
+                <span role="status" style={{ fontSize: 12, color: '#6b7280' }}>
+                  Loading…
+                </span>
+              ) : null}
+            </div>
+
             {tasksError ? (
               <ErrorBanner style={{ marginBottom: 8 }}>{tasksError}</ErrorBanner>
             ) : null}
 
             {/* Keep list mounted during background reloads to avoid flash and scroll reset */}
-            {loadingTasks && (sessionTasks?.length || 0) === 0 ? (
+            {showInitialLoading ? (
               <div style={{ color: '#6b7280', textAlign: 'left' }}>Loading tasks…</div>
             ) : null}
 
-            {(sessionTasks?.length || 0) > 0 || !loadingTasks ? (
+            {hasTasks ? (
               <TasksList tasks={sessionTasks ?? []} onEdit={onEditTask} onDelete={onDeleteTask} />
+            ) : null}
+
+            {!loadingTasks && !hasTasks ? (
+              <div style={{ color: '#6b7280', textAlign: 'left' }}>
+                No tasks in “{activeTaskStatus}”.
+              </div>
             ) : null}
           </div>
         ) : messages.length === 0 && !running && !execError ? (
